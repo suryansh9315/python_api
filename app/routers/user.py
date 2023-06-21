@@ -26,7 +26,10 @@ async def create_user(user: schemas.UserCreate):
     if existing_user:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail= f"user with email:{user.email} already exists")
     hashed_password = utils.hash(user.password)
-    cursor.execute("""INSERT INTO users (email, password) VALUES (%s, %s) RETURNING *""", (user.email, hashed_password))
+    temp_id = utils.generate_random_id('users_id')
+    cursor.execute("""INSERT INTO users_id (id) VALUES (%s) RETURNING *""", (str(temp_id),))
+    cursor.fetchone()
+    cursor.execute("""INSERT INTO users (email, password, id) VALUES (%s, %s, %s) RETURNING *""", (user.email, hashed_password, str(temp_id),))
     new_user = cursor.fetchone()
     conn.commit()
     return new_user

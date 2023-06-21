@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException, status, Request, Depends
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
+from random import randrange
 from . import database
 from .config import settings
 
@@ -44,3 +45,14 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     if not user:
         raise credentials_exception
     return user
+
+def generate_random_id(check_db: str):
+    temp_id = randrange(0,1000000000)
+    if check_db == 'users_id':
+        cursor.execute("""SELECT * FROM users_id WHERE id = %s""", (str(temp_id),))
+    else:
+        cursor.execute("""SELECT * FROM posts_id WHERE id = %s""", (str(temp_id),))
+    user = cursor.fetchone()
+    if user:
+        temp_id = generate_random_id(check_db)
+    return temp_id

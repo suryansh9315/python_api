@@ -2,6 +2,7 @@ from fastapi import status, HTTPException, APIRouter, Depends
 from .. import schemas, database, utils
 from typing import List, Optional
 
+
 router = APIRouter(prefix='', tags=['posts'])
 conn, cursor = database.get_db()
 
@@ -14,7 +15,10 @@ async def get_all_posts(limit: int = 10, skip:int = 0, search: Optional[str] = "
 
 @router.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.PostRes)
 async def create_post(post: schemas.Post, user: int = Depends(utils.get_current_user)):
-    cursor.execute("""INSERT INTO posts (title, content, user_id) VALUES (%s, %s, %s) RETURNING *""", (post.title, post.content, user['id']))
+    temp_id = utils.generate_random_id('posts_id')
+    cursor.execute("""INSERT INTO posts_id (id) VALUES (%s) RETURNING *""", (str(temp_id),))
+    cursor.fetchone()
+    cursor.execute("""INSERT INTO posts (title, content, user_id, id) VALUES (%s, %s, %s, %s) RETURNING *""", (post.title, post.content, user['id'], temp_id))
     new_post = cursor.fetchone()
     conn.commit()
     return new_post
@@ -35,6 +39,8 @@ async def delete_post(id: int, user: int = Depends(utils.get_current_user)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id: {id} was not found")
     if current_post['user_id'] != user['id']:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Not Authorized")
+    cursor.execute("""DELETE FROM posts_id WHERE id = %s RETURNING *""", (str(id),))
+    cursor.fetchone()
     cursor.execute("""DELETE FROM posts WHERE id = %s RETURNING *""", (str(id),))
     deleted_post = cursor.fetchone()
     conn.commit()
